@@ -130,38 +130,43 @@ def main():
         sys.exit(1)
     
     for index, fn in enumerate(sorted(frame_numbers), start=1):
-        try:
-            with ThreadPoolExecutor() as executor:
-                futures = [
-                    executor.submit(load_and_set_frame, cam, fn, args, camera_frames, height, width, black_frame)
-                    for cam in args.camera_order if cam in set(camera_frames.keys())
-                ]
-                all_images = [f.result() for f in futures]
-        except Exception as e:
-            print(f"video_generator.py: error during frame loading for frame {fn}: {e}")
-            sys.exit(1)
-        canvas_height = video_height
-        canvas_width = video_width
-        canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
-
-        for row_index in range(num_rows):
-            start = row_index * cams_per_row
-            end = start + cams_per_row
-            current_row = all_images[start:end]
-
-            vertical_offset = row_index * height
-
-            if len(current_row) == 1:
-                horizontal_offset = (canvas_width - width) // 2
-                canvas[vertical_offset:vertical_offset + height, horizontal_offset:horizontal_offset + width] = current_row[0]
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(load_and_set_frame, cam, fn, args, camera_frames, height, width, black_frame)
+                for cam in args.camera_order if cam in set(camera_frames.keys())
+            ]
+            all_images = []
+            for f in futures:
+                try:
+                    result = f.result()
+                    all_images.append(result)
+                except Exception as e:
+                    print(f"video_generator.py: error loading frame {fn} in thread: {e}")
+                    break  # Skip this frame entirely
             else:
-                for col_index, img in enumerate(current_row):
-                    horizontal_offset = col_index * width
-                    canvas[vertical_offset:vertical_offset + height, horizontal_offset:horizontal_offset + width] = img
+                # Only write frame if all threads succeeded
+                canvas_height = video_height
+                canvas_width = video_width
+                canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
 
-        video.write(canvas)
-        percent_complete = (index / len(frame_numbers)) * 100
-        print(f"Progress: {percent_complete:.2f}% ({index}/{len(frame_numbers)})", end="\r")
+                for row_index in range(num_rows):
+                    start = row_index * cams_per_row
+                    end = start + cams_per_row
+                    current_row = all_images[start:end]
+
+                    vertical_offset = row_index * height
+
+                    if len(current_row) == 1:
+                        horizontal_offset = (canvas_width - width) // 2
+                        canvas[vertical_offset:vertical_offset + height, horizontal_offset:horizontal_offset + width] = current_row[0]
+                    else:
+                        for col_index, img in enumerate(current_row):
+                            horizontal_offset = col_index * width
+                            canvas[vertical_offset:vertical_offset + height, horizontal_offset:horizontal_offset + width] = img
+
+                video.write(canvas)
+                percent_complete = (index / len(frame_numbers)) * 100
+                print(f"Progress: {percent_complete:.2f}% ({index}/{len(frame_numbers)})", end="\r")
     video.release()
 
     print(f"Video created successfully at: {output_file}")
