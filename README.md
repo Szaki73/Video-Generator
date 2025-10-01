@@ -1,5 +1,5 @@
 # Video Generator
-Useful tool to load pictures from a folder and create a video based on multiple cameras and filling missing frames with black one for syncronization.
+Useful tool to load pictures from a folder and create a video based on multiple cameras and filling missing frames with black one for synchronization.
 
 ## Installation:
 - You will need Python 3.13 or later.
@@ -21,6 +21,7 @@ Useful tool to load pictures from a folder and create a video based on multiple 
 - You should be able to run this the same way on Linux or on Windows.
 
 - If you set more or less cameras in the order than there are cameras in the folder, then the non existing cmaeras will be ignored and shown at the end. Not requested cameras will be ignored in the generation.
+
 
 
 
