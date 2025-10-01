@@ -13,10 +13,10 @@ def input_handler():
         usage="python video_generator.py -i <input_path> -o <output_path> -f <framerate> -c <camera_order...>"
     )
 
-    parser.add_argument("-i", "--input_path", type=str, required=False, help="Input folder path")
-    parser.add_argument("-o", "--output_path", type=str, required=False, help="Output folder path")
-    parser.add_argument("-f", "--framerate", type=int, required=False, help="Framerate [0-120] (e.g. 30)")
-    parser.add_argument("-c", "--camera_order", nargs="+", required=False, help="Camera order (e.g. Dev0 Dev1 Dev2...)")
+    parser.add_argument("-i", "--input_path", type=str, required=True, help="Input folder path")
+    parser.add_argument("-o", "--output_path", type=str, required=True, help="Output folder path")
+    parser.add_argument("-f", "--framerate", type=int, required=True, help="Framerate [0-120] (e.g. 30)")
+    parser.add_argument("-c", "--camera_order", nargs="+", required=True, help="Camera order (e.g. Dev0 Dev1 Dev2...)")
 
     if len(sys.argv) < 9 or "-h" in sys.argv:
         parser.print_help()
@@ -35,16 +35,17 @@ def input_validation(args):
     if not os.path.exists(args.output_path):
         print(f"video_generator.py: Output path {args.output_path} does not exist.")
         sys.exit(1)
-
+    if not isinstance(args.framerate, int):
+        print(f"video_generator.py: Framerate must be an integer: {args.framerate}")
+        sys.exit(1)
     if not (0 <= args.framerate <= 120):
         print(f"video_generator.py: Framerate must be between 0 and 120. You provided: {args.framerate}")
         sys.exit(1)
-    else:
-        print("All parameters are valid.")
-        print(f"Input Path: {args.input_path}")
-        print(f"Output Path: {args.output_path}")
-        print(f"Framerate: {args.framerate}")
-        print(f"Camera Order: {args.camera_order}")
+    print("All parameters are valid.")
+    print(f"Input Path: {args.input_path}")
+    print(f"Output Path: {args.output_path}")
+    print(f"Framerate: {args.framerate}")
+    print(f"Camera Order: {args.camera_order}\n")
 
 def sort_images(input_path, camera_order):
     image_files = [f for f in os.listdir(input_path) if f.endswith(".jpg")]
@@ -93,6 +94,14 @@ def load_and_set_frame(cam, fn, args, camera_frames, height, width, black_frame)
         if img is None:
             img = black_frame
 
+        overlay = img.copy()
+        rect_x, rect_y = 5, 5
+        rect_w, rect_h = 250, 50
+        alpha = 0.6
+
+        cv.rectangle(overlay, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), (0, 0, 0), -1)
+        img = cv.addWeighted(overlay, alpha, img, 1 - alpha, 0)
+
         cv.putText(img, f"Frame: {fn}", (11, 41), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv.LINE_AA)
         cv.putText(img, f"Frame: {fn}", (10, 40), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv.LINE_AA)
 
@@ -120,7 +129,7 @@ def main():
         print(f"video_generator.py: error initializing video writer: {e}")
         sys.exit(1)
     
-    for fn in sorted(frame_numbers):
+    for index, fn in enumerate(sorted(frame_numbers), start=1):
         try:
             with ThreadPoolExecutor() as executor:
                 futures = [
@@ -151,6 +160,8 @@ def main():
                     canvas[vertical_offset:vertical_offset + height, horizontal_offset:horizontal_offset + width] = img
 
         video.write(canvas)
+        percent_complete = (index / len(frame_numbers)) * 100
+        print(f"Progress: {percent_complete:.2f}% ({index}/{len(frame_numbers)})", end="\r")
     video.release()
 
     print(f"Video created successfully at: {output_file}")
