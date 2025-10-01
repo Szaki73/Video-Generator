@@ -3,7 +3,7 @@ Useful tool to load pictures from a folder and create a video based on multiple 
 
 ## Installation:
 - You will need Python 3.13 or later.
-- Clone this repository, run the following to clone everything:
+- Clone this repository, run the following to clone everything: `git clone https://github.com/Szaki73/Video-Generator.git`
 - Preferably use a python virtual environment, and install dependencies via pip\
   `pip install -r requirements.txt`
 
@@ -19,4 +19,5 @@ Useful tool to load pictures from a folder and create a video based on multiple 
 ## Notes:
 
 - You should be able to run this the same way on Linux or on Windows.
+
 - If you set more or less cameras in the order than there are cameras in the folder, then the non existing cmaeras will be ignored and shown at the end. Not requested cameras will be ignored in the generation.
