@@ -10,19 +10,25 @@ import time
 def input_handler():
     parser = argparse.ArgumentParser(
         description="Video Generator Tool",
-        usage="python video_generator.py -i <input_path> -o <output_path> -f <framerate> -c <camera_order...>"
+        usage="python video_generator.py -i <input_path> -o <output_path> -f <framerate> -c <camera_order...> -d <camera_delay>"
     )
 
     parser.add_argument("-i", "--input_path", type=str, required=True, help="Input folder path")
     parser.add_argument("-o", "--output_path", type=str, required=True, help="Output folder path")
     parser.add_argument("-f", "--framerate", type=int, required=True, help="Framerate [0-120] (e.g. 30)")
     parser.add_argument("-c", "--camera_order", nargs="+", required=True, help="Camera order (e.g. Dev0 Dev1 Dev2...)")
+    parser.add_argument("-d", "--camera_delay", nargs="+", required=True, help="Camera delay(e.g. 0 1 0...)")
 
-    if len(sys.argv) < 9 or "-h" in sys.argv:
+    if len(sys.argv) < 11 or "-h" in sys.argv:
         parser.print_help()
         sys.exit(0)
 
     args = parser.parse_args()
+    try:
+        args.camera_delay = [int(delay) for delay in args.camera_delay]
+    except ValueError:
+        print("video_generator.py: All camera delays must be integers.")
+        sys.exit(1)
     input_validation(args)
 
     return args
@@ -31,7 +37,6 @@ def input_validation(args):
     if not os.path.exists(args.input_path):
         print(f"video_generator.py: Input path {args.input_path} does not exist.")
         sys.exit(1)
-
     if not os.path.exists(args.output_path):
         print(f"video_generator.py: Output path {args.output_path} does not exist.")
         sys.exit(1)
@@ -41,13 +46,21 @@ def input_validation(args):
     if not (0 <= args.framerate <= 120):
         print(f"video_generator.py: Framerate must be between 0 and 120. You provided: {args.framerate}")
         sys.exit(1)
+    for delay in args.camera_delay:
+        if delay < 0:
+            print(f"video_generator.py: all camera_delay value must be a non negative integer.")
+            sys.exit(1)
+    if len(args.camera_order) != len(args.camera_delay):
+        print(f"video_generator.py: The number of cameras and the number of camera delays must be equal.")
+        sys.exit(1)
     print("All parameters are valid.")
     print(f"Input Path: {args.input_path}")
     print(f"Output Path: {args.output_path}")
     print(f"Framerate: {args.framerate}")
-    print(f"Camera Order: {args.camera_order}\n")
+    print(f"Camera Order: {args.camera_order}")
+    print(f"Camera Delay: {args.camera_delay}\n")
 
-def sort_images(input_path, camera_order):
+def sort_images(input_path, camera_order, camera_delay):
     image_files = [f for f in os.listdir(input_path) if f.endswith(".jpg")]
 
     camera_frames = {}
@@ -57,11 +70,13 @@ def sort_images(input_path, camera_order):
         parts = f.split("_")
         cam = parts[0]
         if cam not in camera_order: continue
+        cam_index = camera_order.index(cam)
+        delay = int(camera_delay[cam_index])
         fn = int(parts[-1][2:].split(".")[0])
-        camera_frames.setdefault(cam, {})[fn] = os.path.join(input_path, f)
-        frame_numbers.add(fn)
+        camera_frames.setdefault(cam, {})[fn + delay] = os.path.join(input_path, f)
+        frame_numbers.add(fn + delay)
     if len(camera_frames) == 0:
-        print("video_generator.py: No camera were found in the input folder from the Camera order.")
+        print("video_generator.py: No camera were found in the input folder from the camera order.")
         sys.exit(1)
     return camera_frames, frame_numbers
 
@@ -114,7 +129,7 @@ def main():
     args = input_handler()
     output_file = os.path.join(args.output_path, "output.mp4")
 
-    camera_frames, frame_numbers = sort_images(args.input_path, args.camera_order)
+    camera_frames, frame_numbers = sort_images(args.input_path, args.camera_order, args.camera_delay)
 
     height, width = get_image_height_and_image_width(camera_frames, args.input_path)
 
@@ -142,9 +157,8 @@ def main():
                     all_images.append(result)
                 except Exception as e:
                     print(f"video_generator.py: error loading frame {fn} in thread: {e}")
-                    break  # Skip this frame entirely
+                    break
             else:
-                # Only write frame if all threads succeeded
                 canvas_height = video_height
                 canvas_width = video_width
                 canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
