@@ -14,8 +14,9 @@ Useful tool to load pictures from a folder and create a video based on multiple 
 - Framerate is locked between 0 and 120.
 - camera_order should be: `Dev0 Dev1 Dev2...` if the image pattern is: `DevX_..._fnY.jpg.`
   Camera_order sets the camera images from top to bottom, left to right.
-- Camera_delay is a list of non negative integers. The number of integers must be equal to the number of cameras in camera_order.
+- Camera_delay is a list of integers. The number of integers must be equal to the number of cameras in camera_order.
   Camera_delay should be: `0 10 0`, which means the second camera in camera_order will start with 10 frame delay.
+- The frame ids still represent the real id. At the start it is possible to see negative ids for black frame, this is because of the delay.
 
 - Runnig this will load all images, from the **input_path**, add the frame number to the top left corner, create the video, and save it in the **output_path** as *output.mp4*.
 
