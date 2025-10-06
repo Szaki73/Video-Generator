@@ -36,7 +36,7 @@ Flag	                Description
 - Applies delay offset to frame numbers
 - Returns: camera_frames: `{camera: {frame_number: image_path}} frame_numbers: set[int]`
 
-**get_video_height_and_video_width(camera_frames, height, width)**: Calculates final video canvas size and layout metadata.
+**get_video_height_and_video_width(camera_frames, height, width)**: Calculates final video canvas size and layout.
 
 - Max 2 cameras per row
 - Returns: `video_height, video_width, num_cameras, cams_per_row, num_rows`
@@ -65,5 +65,6 @@ Flag	                Description
 - Extras:
     - Progress bar
     - Missing camera report
+
 
 **__main__ block**: Measures runtime and handles unexpected errors.
