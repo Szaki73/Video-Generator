@@ -46,13 +46,10 @@ def input_validation(args):
     if not (0 <= args.framerate <= 120):
         print(f"video_generator.py: Framerate must be between 0 and 120. You provided: {args.framerate}")
         sys.exit(1)
-    for delay in args.camera_delay:
-        if delay < 0:
-            print(f"video_generator.py: all camera_delay value must be a non negative integer.")
-            sys.exit(1)
     if len(args.camera_order) != len(args.camera_delay):
         print(f"video_generator.py: The number of cameras and the number of camera delays must be equal.")
         sys.exit(1)
+        
     print("All parameters are valid.")
     print(f"Input Path: {args.input_path}")
     print(f"Output Path: {args.output_path}")
@@ -102,7 +99,7 @@ def get_image_height_and_image_width(camera_frames, input_path):
         sys.exit(1)
 
 
-def load_and_set_frame(cam, fn, args, camera_frames, height, width, black_frame):
+def load_and_set_frame(cam, fn, args, camera_frames, height, width, black_frame, camera_order, camera_delay):
     try:
         img_file = camera_frames[cam].get(fn)
         img = cv.imread(img_file) if img_file else black_frame
@@ -117,8 +114,10 @@ def load_and_set_frame(cam, fn, args, camera_frames, height, width, black_frame)
         cv.rectangle(overlay, (rect_x, rect_y), (rect_x + rect_w, rect_y + rect_h), (0, 0, 0), -1)
         img = cv.addWeighted(overlay, alpha, img, 1 - alpha, 0)
 
-        cv.putText(img, f"Frame: {fn}", (11, 41), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv.LINE_AA)
-        cv.putText(img, f"Frame: {fn}", (10, 40), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv.LINE_AA)
+        cam_index = camera_order.index(cam)
+        delay = int(camera_delay[cam_index])
+        cv.putText(img, f"Frame: {fn - delay}", (11, 41), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3, cv.LINE_AA)
+        cv.putText(img, f"Frame: {fn - delay}", (10, 40), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv.LINE_AA)
 
         return img
     except Exception as e:
@@ -147,7 +146,7 @@ def main():
     for index, fn in enumerate(sorted(frame_numbers), start=1):
         with ThreadPoolExecutor() as executor:
             futures = [
-                executor.submit(load_and_set_frame, cam, fn, args, camera_frames, height, width, black_frame)
+                executor.submit(load_and_set_frame, cam, fn, args, camera_frames, height, width, black_frame, args.camera_order, args.camera_delay)
                 for cam in args.camera_order if cam in set(camera_frames.keys())
             ]
             all_images = []
